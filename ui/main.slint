@@ -1,0 +1,223 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+import { TranslationRow, ActionButton, CustomProgressBar, TranslationCard, ThemedSelect } from "components.slint";
+import { PickerRow, FilePicker } from "file_picker.slint";
+export { Theme, TranslationRow, PickerRow }
+
+export component MainWindow inherits Window {
+    width: 1280px;
+    height: 800px;
+    title: "SIMS TR4DUTOR";
+    background: Theme.color-background;
+    animate background { duration: 250ms; easing: ease-out; }
+
+    in-out property <[TranslationRow]> rows;
+    in-out property <string> file-name;
+    in-out property <string> status-text;
+    in-out property <string> selected-engine: "Google Translate";
+    in-out property <string> selected-preset: "Neutro PT-BR";
+    in-out property <float> progress-percentage: 0.0;
+    in-out property <string> progress-text: "";
+    in-out property <int> total-strings: 0;
+    in-out property <bool> busy: false;
+    callback open-package();
+    callback translate-all();
+    callback export-package();
+    callback search-changed(string);
+    callback edit-translation(int, string);
+
+    in-out property <bool> picker-visible: false;
+    in-out property <bool> picker-mode-save: false;
+    in-out property <string> picker-current-path: "";
+    in-out property <string> picker-selected: "";
+    in-out property <string> picker-filename: "";
+    in-out property <string> picker-error: "";
+    in-out property <[PickerRow]> picker-rows;
+    callback picker-row-clicked(string);
+    callback picker-go-up();
+    callback picker-go-home();
+    callback picker-go-downloads();
+    callback picker-go-mods();
+    callback picker-filename-changed(string);
+    callback picker-confirm();
+    callback picker-cancel();
+
+    VerticalLayout {
+        padding-left: 28px;
+        padding-right: 28px;
+        padding-top: 22px;
+        padding-bottom: 20px;
+        spacing: 16px;
+
+        Rectangle {
+            height: 82px;
+            border-radius: 22px;
+            background: Theme.color-surface;
+            border-width: 1px;
+            border-color: Theme.color-outline;
+            drop-shadow-color: #00000040;
+            drop-shadow-blur: 24px;
+            drop-shadow-offset-y: 6px;
+            animate background, border-color { duration: 220ms; easing: ease-out; }
+
+            HorizontalLayout {
+                x: 22px;
+                y: (parent.height - self.height) / 2;
+                width: parent.width - 22px - 18px;
+                height: 44px;
+                spacing: 18px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    spacing: 5px;
+                    Text { text: "SIMS TR4DUTOR"; color: Theme.color-secondary; font-size: 12px; font-weight: 700; letter-spacing: 1px; animate color { duration: 220ms; } }
+                    Text { text: root.file-name; color: Theme.color-on-surface; font-size: 20px; font-weight: 600; overflow: elide; animate color { duration: 220ms; } }
+                }
+                if (root.total-strings > 0) : Rectangle {
+                    height: 32px;
+                    width: 140px;
+                    border-radius: 16px;
+                    background: Theme.color-surface-container-high;
+                    border-width: 1px;
+                    border-color: Theme.color-outline;
+                    Text {
+                        text: root.total-strings + " frases";
+                        color: Theme.color-tertiary;
+                        font-size: 13px;
+                        font-weight: 600;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+                ActionButton { label: "Abrir pacote"; clicked => { root.open-package(); } }
+            }
+        }
+
+        Rectangle {
+            height: 62px;
+            border-radius: 18px;
+            background: Theme.color-surface-container;
+            animate background { duration: 220ms; easing: ease-out; }
+            HorizontalLayout {
+                x: 16px;
+                y: (parent.height - self.height) / 2;
+                width: parent.width - 16px - 12px;
+                height: 44px;
+                spacing: 12px;
+                Rectangle {
+                    horizontal-stretch: 1;
+                    height: 42px;
+                    border-radius: 21px;
+                    background: Theme.color-surface-container-low;
+                    border-width: 1px;
+                    border-color: search-input.has-focus ? Theme.color-primary : Theme.color-outline;
+                    animate background, border-color { duration: 150ms; easing: ease-out; }
+                    search-input := TextInput {
+                        x: 16px; y: 0px; width: parent.width - 32px; height: parent.height;
+                        color: Theme.color-on-surface;
+                        font-size: 15px;
+                        edited => { root.search-changed(self.text); }
+                    }
+                    Text {
+                        x: 16px; width: parent.width - 32px; height: parent.height;
+                        text: "Pesquisar por texto ou chave hexadecimal";
+                        color: Theme.color-on-surface-variant;
+                        vertical-alignment: center;
+                        font-size: 15px;
+                        visible: search-input.text == "";
+                    }
+                }
+                ThemedSelect {
+                    width: 230px;
+                    model: ["Google Translate", "Argos Translate (Offline NMT)", "LM Studio (Local API)", "Ollama (Llama 3 Local)"];
+                    value: root.selected-engine;
+                    enabled: !root.busy;
+                    selected(v) => { root.selected-engine = v; }
+                }
+                if (root.selected-engine == "LM Studio (Local API)" || root.selected-engine == "Ollama (Llama 3 Local)") : ThemedSelect {
+                    width: 210px;
+                    model: ["Neutro PT-BR", "Adulto +18 (WickedWhims)", "Humor & Sarcasmo", "Fantasia & Épico"];
+                    value: root.selected-preset;
+                    enabled: !root.busy;
+                    selected(v) => { root.selected-preset = v; }
+                }
+                ActionButton { label: root.busy ? "Traduzindo..." : "Traduzir tudo"; enabled: !root.busy; clicked => { root.translate-all(); } }
+                ActionButton { label: "Exportar PT-BR"; filled: true; enabled: !root.busy; clicked => { root.export-package(); } }
+            }
+        }
+
+        if (!root.busy) : Rectangle {
+            height: 36px;
+            border-radius: 12px;
+            background: Theme.color-surface-container-low;
+            border-width: 1px;
+            border-color: Theme.color-outline;
+            animate background, border-color { duration: 220ms; easing: ease-out; }
+            Text {
+                x: 14px; width: parent.width - 28px; height: parent.height;
+                text: root.status-text;
+                color: Theme.color-on-surface-variant;
+                vertical-alignment: center;
+                font-size: 13px;
+            }
+        }
+        if (root.busy) : CustomProgressBar {
+            progress: root.progress-percentage;
+            text: root.progress-text;
+        }
+
+        if (root.rows.length == 0) : Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center;
+                spacing: 8px;
+                Text {
+                    text: "Nenhuma frase para mostrar";
+                    color: Theme.color-on-surface;
+                    font-size: 18px;
+                    font-weight: 600;
+                    horizontal-alignment: center;
+                }
+                Text {
+                    text: root.file-name == "Nenhum pacote carregado"
+                        ? "Abra um mod .package para começar a revisão das traduções."
+                        : "Nenhum resultado para essa busca.";
+                    color: Theme.color-on-surface-variant;
+                    font-size: 14px;
+                    horizontal-alignment: center;
+                }
+            }
+        }
+        if (root.rows.length > 0) : ScrollView {
+            vertical-stretch: 1;
+            VerticalLayout {
+                spacing: 12px;
+                for row in root.rows: TranslationCard {
+                    item: row;
+                    translation-edited(key, value) => { root.edit-translation(key, value); }
+                }
+            }
+        }
+    }
+
+    if (root.picker-visible) : FilePicker {
+        x: 0px;
+        y: 0px;
+        width: root.width;
+        height: root.height;
+        mode-save: root.picker-mode-save;
+        current-path: root.picker-current-path;
+        selected-name: root.picker-selected;
+        filename: root.picker-filename;
+        error-text: root.picker-error;
+        rows: root.picker-rows;
+        row-clicked(name) => { root.picker-row-clicked(name); }
+        go-up => { root.picker-go-up(); }
+        go-home => { root.picker-go-home(); }
+        go-downloads => { root.picker-go-downloads(); }
+        go-mods => { root.picker-go-mods(); }
+        filename-changed(text) => { root.picker-filename-changed(text); }
+        confirm => { root.picker-confirm(); }
+        cancel => { root.picker-cancel(); }
+    }
+}

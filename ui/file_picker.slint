@@ -1,0 +1,221 @@
+import { ScrollView } from "std-widgets.slint";
+import { Theme } from "theme.slint";
+
+export struct PickerRow {
+    name: string,
+    is-dir: bool,
+}
+
+component PickerShortcut inherits Rectangle {
+    in property <string> label;
+    callback clicked;
+    height: 32px;
+    min-width: 32px;
+    border-radius: 10px;
+    background: touch.has-hover ? Theme.color-surface-container-high : Theme.color-surface-container;
+    border-width: 1px;
+    border-color: Theme.color-outline;
+    animate background { duration: 120ms; easing: ease-out; }
+
+    Text {
+        x: 10px; width: parent.width - 20px; height: parent.height;
+        text: root.label;
+        color: Theme.color-on-surface-variant;
+        font-size: 13px;
+        font-weight: 600;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    touch := TouchArea { clicked => { root.clicked(); } }
+}
+
+export component FilePicker inherits Rectangle {
+    in property <bool> mode-save: false;
+    in property <string> current-path;
+    in property <string> selected-name;
+    in property <string> filename;
+    in property <string> error-text;
+    in property <[PickerRow]> rows;
+
+    callback row-clicked(string);
+    callback go-up();
+    callback go-home();
+    callback go-downloads();
+    callback go-mods();
+    callback filename-changed(string);
+    callback confirm();
+    callback cancel();
+
+    background: #00000099;
+
+    // Fecha ao clicar fora do painel.
+    TouchArea { clicked => { root.cancel(); } }
+
+    Rectangle {
+        width: 760px;
+        height: 560px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        border-radius: 20px;
+        background: Theme.color-surface;
+        border-width: 1px;
+        border-color: Theme.color-outline;
+        drop-shadow-color: #000000a0;
+        drop-shadow-blur: 40px;
+        drop-shadow-offset-y: 16px;
+
+        // Absorve cliques dentro do painel para não fechar o modal (TouchArea do fundo).
+        TouchArea {}
+
+        VerticalLayout {
+            padding: 22px;
+            spacing: 14px;
+
+            Text {
+                text: root.mode-save ? "Exportar pacote traduzido" : "Selecionar pacote .package";
+                color: Theme.color-on-surface;
+                font-size: 18px;
+                font-weight: 700;
+            }
+
+            HorizontalLayout {
+                height: 36px;
+                spacing: 8px;
+                PickerShortcut { label: "↑"; clicked => { root.go-up(); } }
+                Rectangle {
+                    horizontal-stretch: 1;
+                    border-radius: 10px;
+                    background: Theme.color-surface-container-low;
+                    border-width: 1px;
+                    border-color: Theme.color-outline;
+                    Text {
+                        x: 12px; width: parent.width - 24px; height: parent.height;
+                        text: root.current-path;
+                        color: Theme.color-on-surface-variant;
+                        font-size: 13px;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+                PickerShortcut { label: "Início"; clicked => { root.go-home(); } }
+                PickerShortcut { label: "Downloads"; clicked => { root.go-downloads(); } }
+                PickerShortcut { label: "Mods"; clicked => { root.go-mods(); } }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                border-radius: 12px;
+                background: Theme.color-surface-container-low;
+                border-width: 1px;
+                border-color: Theme.color-outline;
+                clip: true;
+
+                ScrollView {
+                    VerticalLayout {
+                        padding: 6px;
+                        spacing: 2px;
+                        for row in root.rows: Rectangle {
+                            height: 38px;
+                            border-radius: 8px;
+                            background: row.name == root.selected-name
+                                ? Theme.color-surface-container-high
+                                : row-touch.has-hover ? Theme.color-surface-container : #00000000;
+                            animate background { duration: 100ms; easing: ease-out; }
+
+                            HorizontalLayout {
+                                padding-left: 10px;
+                                padding-right: 10px;
+                                spacing: 10px;
+                                Text {
+                                    text: row.is-dir ? "📁" : "📄";
+                                    font-size: 14px;
+                                    vertical-alignment: center;
+                                }
+                                Text {
+                                    horizontal-stretch: 1;
+                                    text: row.name;
+                                    color: row.name == root.selected-name ? Theme.color-primary : Theme.color-on-surface;
+                                    font-weight: row.name == root.selected-name ? 700 : 400;
+                                    font-size: 14px;
+                                    vertical-alignment: center;
+                                    overflow: elide;
+                                }
+                            }
+                            row-touch := TouchArea {
+                                clicked => { root.row-clicked(row.name); }
+                            }
+                        }
+                        if (root.rows.length == 0) : Text {
+                            text: "Pasta vazia.";
+                            color: Theme.color-on-surface-variant;
+                            font-size: 13px;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            if (root.mode-save) : HorizontalLayout {
+                height: 42px;
+                spacing: 10px;
+                Text { text: "Nome do arquivo"; color: Theme.color-on-surface-variant; font-size: 13px; vertical-alignment: center; }
+                Rectangle {
+                    horizontal-stretch: 1;
+                    border-radius: 10px;
+                    background: Theme.color-surface-container-low;
+                    border-width: 1px;
+                    border-color: filename-input.has-focus ? Theme.color-primary : Theme.color-outline;
+                    animate border-color { duration: 150ms; easing: ease-out; }
+                    filename-input := TextInput {
+                        x: 12px; y: 0px; width: parent.width - 24px; height: parent.height;
+                        text: root.filename;
+                        color: Theme.color-on-surface;
+                        font-size: 14px;
+                        edited => { root.filename-changed(self.text); }
+                    }
+                }
+            }
+
+            if (root.error-text != "") : Text {
+                text: root.error-text;
+                color: Theme.color-on-error-container;
+                font-size: 13px;
+            }
+
+            HorizontalLayout {
+                height: 44px;
+                alignment: end;
+                spacing: 12px;
+                Rectangle {
+                    width: 120px;
+                    border-radius: 22px;
+                    border-width: 1px;
+                    border-color: cancel-touch.has-hover ? Theme.color-primary : Theme.color-outline;
+                    background: Theme.color-surface-container;
+                    animate border-color { duration: 150ms; easing: ease-out; }
+                    Text { text: "Cancelar"; color: Theme.color-on-surface; horizontal-alignment: center; vertical-alignment: center; font-size: 15px; font-weight: 600; }
+                    cancel-touch := TouchArea { clicked => { root.cancel(); } }
+                }
+                Rectangle {
+                    width: 140px;
+                    border-radius: 22px;
+                    property <bool> can-confirm: root.mode-save ? root.filename != "" : root.selected-name != "";
+                    background: !can-confirm ? Theme.color-surface-container-low : (confirm-touch.has-hover ? Theme.color-primary.brighter(0.12) : Theme.color-primary);
+                    animate background { duration: 150ms; easing: ease-out; }
+                    Text {
+                        text: root.mode-save ? "Salvar" : "Abrir";
+                        color: parent.can-confirm ? Theme.color-on-primary : Theme.color-on-surface-variant;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        font-size: 15px;
+                        font-weight: 700;
+                    }
+                    confirm-touch := TouchArea {
+                        enabled: parent.can-confirm;
+                        clicked => { root.confirm(); }
+                    }
+                }
+            }
+        }
+    }
+}

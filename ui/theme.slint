@@ -1,0 +1,31 @@
+// Tokens de cor do app. Os valores abaixo são a paleta atual (roxo/dourado) e
+// funcionam como fallback quando não há tema externo aplicado (ver src/theme.rs).
+// Quando a Hydra Shell está integrada, cada propriedade é sobrescrita em runtime.
+export global Theme {
+    in-out property <color> color-background: #121015;
+
+    in-out property <color> color-surface: #1c1821;
+    in-out property <color> color-surface-container-low: #17151a;
+    in-out property <color> color-surface-container: #201d22;
+    in-out property <color> color-surface-container-high: #211e25;
+
+    in-out property <color> color-on-surface: #f4edf6;
+    in-out property <color> color-on-surface-variant: #c9bfcc;
+
+    in-out property <color> color-outline: #3c3542;
+    in-out property <color> color-shadow: #000000;
+
+    in-out property <color> color-primary: #9c6bff;
+    in-out property <color> color-on-primary: #1b102b;
+
+    in-out property <color> color-secondary: #f3c76b;
+    in-out property <color> color-on-secondary: #2b2336;
+
+    in-out property <color> color-tertiary: #cdb9f5;
+
+    in-out property <color> color-error-container: #4b272a;
+    in-out property <color> color-on-error-container: #ffb4ab;
+
+    in-out property <color> color-success-container: #1d3a31;
+    in-out property <color> color-on-success-container: #9de4be;
+}

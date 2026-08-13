@@ -1,0 +1,267 @@
+import { Theme } from "theme.slint";
+
+export struct TranslationRow {
+    key-hex: string,
+    key: int,
+    source: string,
+    translation: string,
+    token-state: string,
+    is-safe: bool,
+}
+
+export component ThemedSelect inherits Rectangle {
+    in property <[string]> model;
+    in property <string> value;
+    in property <bool> enabled: true;
+    callback selected(string);
+
+    height: 42px;
+    border-radius: 12px;
+    background: !root.enabled
+        ? Theme.color-surface-container-low
+        : trigger.has-hover ? Theme.color-surface-container-high : Theme.color-surface-container-low;
+    border-width: 1px;
+    border-color: trigger.has-hover && root.enabled ? Theme.color-primary : Theme.color-outline;
+    animate background, border-color { duration: 150ms; easing: ease-out; }
+
+    HorizontalLayout {
+        padding-left: 14px;
+        padding-right: 12px;
+        spacing: 8px;
+        Text {
+            horizontal-stretch: 1;
+            text: root.value;
+            color: root.enabled ? Theme.color-on-surface : Theme.color-on-surface-variant;
+            font-size: 14px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            text: "⌄";
+            color: Theme.color-on-surface-variant;
+            font-size: 15px;
+            font-weight: 700;
+            vertical-alignment: center;
+        }
+    }
+
+    trigger := TouchArea {
+        enabled: root.enabled;
+        clicked => { popup.show(); }
+    }
+
+    popup := PopupWindow {
+        x: 0px;
+        y: root.height + 6px;
+        width: root.width;
+
+        Rectangle {
+            border-radius: 12px;
+            background: Theme.color-surface-container;
+            border-width: 1px;
+            border-color: Theme.color-outline;
+            drop-shadow-color: #00000080;
+            drop-shadow-blur: 24px;
+            drop-shadow-offset-y: 8px;
+
+            VerticalLayout {
+                padding: 6px;
+                spacing: 2px;
+                for item in root.model: Rectangle {
+                    height: 38px;
+                    border-radius: 8px;
+                    background: item-touch.has-hover ? Theme.color-surface-container-high : #00000000;
+                    animate background { duration: 100ms; easing: ease-out; }
+                    Text {
+                        x: 12px;
+                        width: parent.width - 24px;
+                        height: parent.height;
+                        text: item;
+                        color: item == root.value ? Theme.color-primary : Theme.color-on-surface;
+                        font-size: 14px;
+                        font-weight: item == root.value ? 700 : 400;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    item-touch := TouchArea {
+                        clicked => { root.selected(item); }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component ActionButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> filled: false;
+    in property <bool> enabled: true;
+    callback clicked;
+    height: 44px;
+    min-width: 144px;
+    border-radius: 22px;
+    border-width: filled ? 0px : 1px;
+    border-color: touch.has-hover && root.enabled ? Theme.color-primary : Theme.color-outline;
+
+    background: !root.enabled
+        ? Theme.color-surface-container-low
+        : root.filled
+            ? (touch.pressed ? Theme.color-primary.darker(0.18) : touch.has-hover ? Theme.color-primary.brighter(0.12) : Theme.color-primary)
+            : (touch.pressed ? Theme.color-surface-container-high.darker(0.08) : touch.has-hover ? Theme.color-surface-container-high : Theme.color-surface-container);
+
+    drop-shadow-color: root.filled && root.enabled ? #00000066 : #00000000;
+    drop-shadow-blur: 16px;
+    drop-shadow-offset-y: 4px;
+
+    animate background, border-color, drop-shadow-color { duration: 150ms; easing: ease-out; }
+
+    label := Text {
+        text: root.label;
+        color: root.enabled ? (root.filled ? Theme.color-on-primary : Theme.color-on-surface) : Theme.color-on-surface-variant;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        font-size: 15px;
+        font-weight: 600;
+        animate color { duration: 150ms; easing: ease-out; }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component InfoPill inherits Rectangle {
+    in property <string> label;
+    in property <bool> safe: true;
+    height: 26px;
+    width: 104px;
+    border-radius: 13px;
+    background: root.safe ? Theme.color-success-container : Theme.color-error-container;
+    animate background { duration: 200ms; easing: ease-out; }
+    Text {
+        text: root.label;
+        color: root.safe ? Theme.color-on-success-container : Theme.color-on-error-container;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        font-size: 12px;
+        font-weight: 600;
+        animate color { duration: 200ms; easing: ease-out; }
+    }
+}
+
+export component CustomProgressBar inherits Rectangle {
+    in property <float> progress: 0.0;
+    in property <string> text: "";
+    height: 38px;
+    border-radius: 12px;
+    background: Theme.color-surface-container-low;
+    border-width: 1px;
+    border-color: Theme.color-outline;
+    animate background, border-color { duration: 200ms; easing: ease-out; }
+
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width * clamp(root.progress, 0.0, 1.0);
+        height: parent.height;
+        border-radius: 12px;
+        background: @linear-gradient(90deg, Theme.color-primary 0%, Theme.color-tertiary 50%, Theme.color-secondary 100%);
+        animate width { duration: 220ms; easing: ease-out; }
+    }
+
+    Text {
+        text: root.text;
+        color: Theme.color-on-surface;
+        font-size: 13px;
+        font-weight: 700;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+export component TranslationCard inherits Rectangle {
+    in property <TranslationRow> item;
+    callback translation-edited(int, string);
+    height: 178px;
+    border-radius: 16px;
+    background: card-touch.has-hover ? Theme.color-surface-container : Theme.color-surface;
+    border-width: 1px;
+    border-color: item.is-safe ? Theme.color-outline : Theme.color-error-container.brighter(0.35);
+
+    drop-shadow-color: card-touch.has-hover ? #0000004d : #00000000;
+    drop-shadow-blur: 22px;
+    drop-shadow-offset-y: 8px;
+
+    animate background, border-color, drop-shadow-color { duration: 180ms; easing: ease-out; }
+
+    card-touch := TouchArea {
+        // Somente para detectar hover e dar elevação sutil ao card; os campos internos
+        // (TextInput) continuam recebendo o clique normalmente por estarem acima na pilha.
+    }
+
+    HorizontalLayout {
+        padding-left: 20px;
+        padding-right: 20px;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        spacing: 18px;
+
+        VerticalLayout {
+            width: 180px;
+            spacing: 9px;
+            Text {
+                text: item.key-hex;
+                color: Theme.color-on-surface;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            InfoPill { label: item.token-state; safe: item.is-safe; }
+            Text {
+                text: "STBL / PT-BR";
+                color: Theme.color-on-surface-variant;
+                font-size: 12px;
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 7px;
+            Text { text: "ORIGINAL"; color: Theme.color-tertiary; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+            Rectangle {
+                height: 104px;
+                border-radius: 10px;
+                background: Theme.color-surface-container-low;
+                Text {
+                    x: 12px; y: 10px; width: parent.width - 24px; height: parent.height - 20px;
+                    text: item.source;
+                    color: Theme.color-on-surface-variant;
+                    font-size: 14px;
+                    wrap: word-wrap;
+                    overflow: elide;
+                }
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            spacing: 7px;
+            Text { text: "TRADUÇÃO"; color: Theme.color-secondary; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; }
+            Rectangle {
+                height: 104px;
+                border-radius: 10px;
+                background: Theme.color-surface-container-low;
+                border-width: 1px;
+                border-color: translation-input.has-focus ? Theme.color-primary : Theme.color-outline;
+                animate border-color { duration: 150ms; easing: ease-out; }
+                translation-input := TextInput {
+                    x: 12px; y: 8px; width: parent.width - 24px; height: parent.height - 16px;
+                    text: item.translation;
+                    color: Theme.color-on-surface;
+                    font-size: 14px;
+                    wrap: word-wrap;
+                    edited => { root.translation-edited(item.key, self.text); }
+                }
+            }
+        }
+    }
+}
